@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kế hoạch dạy học theo tuần</title>
   
+  <!-- Các thư viện bổ trợ bên thứ ba -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css">
@@ -14,6 +15,9 @@
   <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
+  <!-- ==========================================================================
+     PHẦN 1: TOÀN BỘ GIAO DIỆN CSS GỐC
+     ========================================================================== -->
   <style>
     :root {
         --primary: #1a73e8;
@@ -250,6 +254,9 @@
 </head>
 <body>
   
+  <!-- ==========================================================================
+     PHẦN 2: TOÀN BỘ BỐ CỤC GIAO DIỆN HTML GỐC
+     ========================================================================== -->
   <div id="loginScreen" class="login-wrapper">
     <div class="login-card">
       <div class="login-header">
@@ -566,6 +573,9 @@
     </div>
   </div>
 
+  <!-- ==========================================================================
+     PHẦN 3: BỘ GIẢ LẬP ĐƯỜNG TRUYỀN GOOGLE.SCRIPT.RUN (LINK WEB APP CỦA BẠN)
+     ========================================================================== -->
   <script>
     const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw9JLNWaYOJjrBpIt285dMaiEcc9nIwQUNvTdqilLakzLx3GfiA6OdsU6UTi99fOfaR/exec";
 
@@ -610,6 +620,9 @@
     };
   </script>
 
+  <!-- ==========================================================================
+     PHẦN 4: TOÀN BỘ SCRIPT ĐIỀU KHIỂN LOGIC ĐĂNG NHẬP + CHẠY BẢNG TÍNH
+     ========================================================================== -->
   <script>
     let hotInstance = null;
     let hotPPCTInstance = null; 
@@ -653,10 +666,10 @@
     };
 
     document.addEventListener("DOMContentLoaded", function() {
-      // Bật Màn Hình Loading Chờ Đồng Bộ Danh Mục
+      // Bật Màn Hình Chờ khi tải danh mục gốc
       DOM.loadingOverlay.style.display = 'flex';
-      DOM.loadingText.innerText = "Đang kết nối luồng và tải danh mục hệ thống...";
-      DOM.status.innerText = "Đang đồng bộ dữ liệu hệ thống từ máy chủ...";
+      DOM.loadingText.innerText = "Đang đồng bộ và nạp cấu hình hệ thống từ Google Sheets...";
+      DOM.status.innerText = "Đang kết nối dữ liệu từ máy chủ...";
          
       if (DOM.btnCapNhat) DOM.btnCapNhat.style.display = "none";
       if (DOM.vungAdminCapLaiMk) DOM.vungAdminCapLaiMk.style.display = "none";
@@ -687,7 +700,7 @@
         });
       }
 
-      // ĐỒNG BỘ TẢI DANH MỤC TRƯỚC KHI KÍCH HOẠT FORM ĐĂNG NHẬP
+      // GỬI YÊU CẦU TẢI DANH MỤC TỪ SERVER GOOGLE SHEETS
       google.script.run
         .withSuccessHandler(function(data) {
           nguonDuLieuForm = data;
@@ -704,7 +717,7 @@
           }
           DOM.monhoc_cbo.innerHTML = ""; DOM.monhoc_cbo.appendChild(f2);
 
-          DOM.status.innerText = "Đồng bộ danh mục thành công. Đang tải cấu hình...";
+          DOM.status.innerText = "Đồng bộ hệ thống thành công. Sẵn sàng.";
           khởiTạoLướiBáoGiảng();
           khởiTạoLướiPhụPPCT(); 
 
@@ -735,7 +748,7 @@
           DOM.txtTimKiemLuoi?.addEventListener("input", xulyTimKiemNhanhTrenLuoi);
           document.getElementById("btXuatExcelNhanh")?.addEventListener("click", thucHienXuatExcelLuoiBaoGiang);
 
-          // CHỈ CHẠY ĐĂNG NHẬP SAU KHI MẠNG ĐÃ ĐỔ DỮ LIỆU XONG XUÔI
+          // GỌI THỦ TỤC THIẾT LẬP SAU ĐĂNG NHẬP
           taiThongTinDangNhap();
           
           DOM.giaovien.addEventListener("change", function() {
@@ -747,7 +760,7 @@
         })
         .withFailureHandler(function() {
           DOM.loadingOverlay.style.display = 'none';
-          DOM.status.innerText = "Lỗi kết nối danh mục từ máy chủ tổng!";
+          DOM.status.innerText = "Lỗi đường truyền hoặc trình duyệt chặn kết nối Google Sheets!";
           khởiTạoLướiBáoGiảng();
         })
         .getListDataDataFromSheet();
@@ -771,6 +784,9 @@
     }
 
     function taiThongTinDangNhap() {
+      // TẮT NGAY MÀN HÌNH CHỜ ĐỂ NGƯỜI DÙNG TỰ DO LỰA CHỌN THỦ CÔNG
+      DOM.loadingOverlay.style.display = 'none';
+      
       const isRemember = localStorage.getItem('login_remember');
       if (isRemember === 'true') {
         DOM.chkNhoDangNhap.checked = true;
@@ -778,14 +794,6 @@
         tuDongChonSelect('login_nam', localStorage.getItem('login_nam'));
         tuDongChonSelect('login_truong', localStorage.getItem('login_truong'));
         tuDongChonSelect('login_gv', localStorage.getItem('login_gv'));
-      } else {
-        // Tối ưu gán mặc định Năm học, kích hoạt đổ Trường học rồi TẮT Loading ẩn
-        if (Array.from(DOM.loginNam.options).some(opt => opt.value === "2026-2027")) {
-          DOM.loginNam.value = "2026-2027";
-          capNhatComboboxTruongHoc("2026-2027");
-        } else {
-          DOM.loadingOverlay.style.display = 'none';
-        }
       }
     }
 
@@ -819,13 +827,13 @@
       const giaoVien = DOM.loginGv.value;
       const matKhau = DOM.loginPass.value.trim();
 
-      if(!namHoc || !truongHoc || !giaoVien) {
-         alert("Vui lòng đợi hệ thống nạp danh mục cấu hình và chọn đủ thông tin trước khi nhấn Đăng nhập!");
+      if (!namHoc || !truongHoc || !giaoVien) {
+         alert("Vui lòng chọn đầy đủ Năm học, Trường học và tên Giáo viên trước khi bấm Đăng nhập!");
          return;
       }
 
       DOM.loadingOverlay.style.display = 'flex';
-      DOM.loadingText.innerText = 'Đang xác thực thông tin tài khoản giáo viên...';
+      DOM.loadingText.innerText = 'Đang xác thực bảo mật tài khoản giáo viên...';
 
       google.script.run
         .withSuccessHandler(function(ketQua) {
@@ -876,28 +884,24 @@
             DOM.status.innerText = laAdminHeThong ? `[QUẢN TRỊ] Đăng nhập thành công. Tài khoản: ${giaoVien}` : `Đăng nhập thành công. Xin chào, ${giaoVien}`;
           } else {
             DOM.loadingOverlay.style.display = 'none';
-            alert('Đăng nhập thất bại: Mật khẩu không chính xác hoặc không tìm thấy hồ sơ giáo viên!');
+            alert('Đăng nhập thất bại: Sai mật khẩu hoặc tài khoản giáo viên không tồn tại trên hệ thống!');
             DOM.loginPass.focus();
           }
         })
         .withFailureHandler(function(err) {
           DOM.loadingOverlay.style.display = 'none';
-          alert('Lỗi kết nối máy chủ đường truyền: ' + err.toString());
+          alert('Không thể kết nối đến máy chủ Google: ' + err.toString());
         })
         .xacThucMatKhauGiaoVien(namHoc, truongHoc, giaoVien, matKhau); 
     }
 
     function capNhatComboboxTruongHoc(namHocDuocChon) {
-      if (!namHocDuocChon || !nguonDuLieuForm.banDoHeThong[namHocDuocChon]) {
-         DOM.loadingOverlay.style.display = "none";
-         return;
-      }
+      if (!namHocDuocChon || !nguonDuLieuForm.banDoHeThong[namHocDuocChon]) return;
       const f = document.createDocumentFragment();
       f.appendChild(new Option("-- Chọn Trường học --", ""));
       Object.keys(nguonDuLieuForm.banDoHeThong[namHocDuocChon]).forEach(t => f.appendChild(new Option(t, t)));
       DOM.loginTruong.innerHTML = ""; DOM.loginTruong.appendChild(f);
       DOM.loginGv.innerHTML = '<option value="">-- Chọn Trường trước --</option>';
-      DOM.loadingOverlay.style.display = "none"; // Hoàn tất đồng bộ tắt Loading
     }
 
     function capNhatComboboxGiaoVien(namHocHienTai, truongHocDuocChon) {
