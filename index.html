@@ -135,17 +135,6 @@
     .btn-secondary-outline { border-color: var(--border); color: var(--neutral); background: transparent; }
     .btn-secondary-outline:hover { background: #f1f3f4; }
 
-    .table-toolbar {
-        background: #fff;
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 10px 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: var(--shadow);
-    }
-
     .font-weight-bold { font-weight: bold !important; }
     #gridPPCT .handsontable td.font-weight-bold { background-color: #fff9db !important; color: #b15000 !important; }
     .ppct-title-label { font-size: 13px; font-weight: bold; color: #1a365d; margin: 12px 0 6px 0; border-left: 3px solid #1a73e8; padding-left: 6px; }
@@ -578,7 +567,6 @@
   </div>
 
   <script>
-    // ⚠️ QUAN TRỌNG CHẾT NGƯỜI: Điền link Web App sinh ra sau khi Deploy "Anyone" tại đây!
     const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw9JLNWaYOJjrBpIt285dMaiEcc9nIwQUNvTdqilLakzLx3GfiA6OdsU6UTi99fOfaR/exec";
 
     window.google = {
@@ -795,13 +783,15 @@
         tuDongChonSelect('login_truong', localStorage.getItem('login_truong'));
         tuDongChonSelect('login_gv', localStorage.getItem('login_gv'));
       } else {
-        for (let i = 0; i < DOM.loginNam.options.length; i++) {
-          if (DOM.loginNam.options[i].value === "2026-2027") {
-            DOM.loginNam.selectedIndex = i;
-            capNhatComboboxTruongHoc("2026-2027");
-            break;
+        setTimeout(() => {
+          for (let i = 0; i < DOM.loginNam.options.length; i++) {
+            if (DOM.loginNam.options[i].value === "2026-2027") {
+              DOM.loginNam.selectedIndex = i;
+              DOM.loginNam.dispatchEvent(new Event('change'));
+              break;
+            }
           }
-        }
+        }, 500);
       }
     }
 
@@ -905,6 +895,7 @@
       Object.keys(nguonDuLieuForm.banDoHeThong[namHocDuocChon]).forEach(t => f.appendChild(new Option(t, t)));
       DOM.loginTruong.innerHTML = ""; DOM.loginTruong.appendChild(f);
       DOM.loginGv.innerHTML = '<option value="">-- Chọn Trường trước --</option>';
+      DOM.loadingOverlay.style.display = "none"; // Bảo mật tắt loading khi đổ trường học
     }
 
     function capNhatComboboxGiaoVien(namHocHienTai, truongHocDuocChon) {
@@ -943,12 +934,12 @@
       if (!gvCanXoa) { alert("Vui lòng lựa chọn họ và tên Giáo viên cần xóa khỏi hệ thống!"); return; }
       if (gvCanXoa === gvHienTai) { alert("Bảo mật hệ thống từ chối: Bạn không được phép tự xóa tài khoản của chính mình!"); return; }
 
-      const xacNhan1 = confirm(`🚨 CẢNH BÁO NGUY HIỂM - QUẢN TRỊ VIÊN TRƯỜNG\n\nBạn có chắc chắn muốn XÓA TOÀN BỘ hồ sơ và TỆP LỊCH BÁO GIẢNG của giáo viên [ ${gvCanXoa} ] không?\n\nMọi quyền thao tác của giáo viên này sẽ bị tước bỏ ngay lập tức!`);
+      const xacNhan1 = confirm(`🚨 CẢNH BÁO NGUY HIỂM\n\nBạn có chắc chắn muốn XÓA TOÀN BỘ hồ sơ của giáo viên [ ${gvCanXoa} ] không?`);
       if (!xacNhan1) return;
-      const xacNhan2 = confirm(`⚠️ XÁC THỰC LẦN CUỐI\n\nTệp dữ liệu báo giảng của giáo viên trên Google Drive sẽ bị hủy bỏ. Tên giáo viên sẽ biến mất khỏi danh mục trường trong vòng 12 giờ tới.\n\nNhấn OK để thực thi lệnh xóa.`);
+      const xacNhan2 = confirm(`⚠️ XÁC THỰC LẦN CUỐI\n\nNhấn OK để thực thi lệnh xóa.`);
       if (!xacNhan2) return;
 
-      DOM.status.innerText = `Đang kích hoạt lệnh bảo mật, cô lập tài khoản và tiêu hủy file Drive của giáo viên: ${gvCanXoa}...`;
+      DOM.status.innerText = `Đang kích hoạt lệnh bảo mật và xóa giáo viên: ${gvCanXoa}...`;
       DOM.loadingOverlay.style.display = "flex";
 
       google.script.run
@@ -956,7 +947,6 @@
           DOM.loadingOverlay.style.display = "none";
           alert(res.tinNhan);
           if (res.thanhCong) {
-            DOM.status.innerText = `Đã cô lập thành công giáo viên ${gvCanXoa}.`;
             google.script.run
               .withSuccessHandler(function(data) {
                 nguonDuLieuForm = data;
@@ -966,7 +956,7 @@
               .getListDataDataFromSheet();
           }
         })
-        .withFailureHandler(function(err) { DOM.loadingOverlay.style.display = "none"; alert("Sự cố hệ thống từ lớp máy chủ Drive: " + err.toString()); })
+        .withFailureHandler(function(err) { DOM.loadingOverlay.style.display = "none"; alert("Sự cố hệ thống: " + err.toString()); })
         .xuLyXoaGiaoVienAdmin(nam, truong, gvCanXoa, gvHienTai);
     });
 
@@ -1080,14 +1070,14 @@
     function thucHienLocAnHienBuoiTheoMaTran() {
       if (!hotInstance) return;
       const pluginHiddenRows = hotInstance.getPlugin('hiddenRows');
-      let danhSachSachDongCanAn = [], labelTextParts = [];
+      let danhSachDongCanAn = [], labelTextParts = [];
       const chuoiThu = ["T2", "T3", "T4", "T5", "T6", "T7"];
       
       document.querySelectorAll(".chk-an-buoi").forEach(chk => {
         if (chk.checked) {
           let indexMaTran = parseInt(chk.getAttribute("data-index"), 10);
           labelTextParts.push(`${chuoiThu[Math.floor(indexMaTran / 2)]} (${(indexMaTran % 2 === 0) ? "Sáng" : "Chiều"})`);
-          let start = indexMaTran * 5; for (let r = start; r < start + 5; r++) danhSachSachDongCanAn.push(r);
+          let start = indexMaTran * 5; for (let r = start; r < start + 5; r++) danhSachDongCanAn.push(r);
         }
       });
 
@@ -1102,7 +1092,7 @@
       }
       let allRows = []; for (let i = 0; i < 60; i++) allRows.push(i);
       pluginHiddenRows.showRows(allRows);
-      if (danhSachSachDongCanAn.length > 0) pluginHiddenRows.hideRows(danhSachSachDongCanAn);
+      if (danhSachDongCanAn.length > 0) pluginHiddenRows.hideRows(danhSachDongCanAn);
       hotInstance.render();
     }
 
@@ -1222,7 +1212,7 @@
             if (col === 7 && oldVal !== newVal) {
               const nam = DOM.namhoc.value, truong = DOM.truonghoc.value, gv = DOM.giaovien.value, tuan = DOM.tuan.value;
               if (!nam || !truong || !gv) return;
-              DOM.status.innerText = `Đang đồng bộ công thức Excel dòng ${row + 1} và tính toán lại toàn bộ...`;
+              DOM.status.innerText = `Đang đồng bộ công thức Excel dòng ${row + 1}...`;
 
               google.script.run
                 .withSuccessHandler(res => {
@@ -1230,7 +1220,7 @@
                     let mangThayDoiDongLoat = [];
                     res.duLieuCapNhatTuan.forEach(item => { mangThayDoiDongLoat.push([item.dongIdx, 4, item.tietPpct], [item.dongIdx, 5, item.tenBaiDay]); });
                     hotInstance.setDataAtCell(mangThayDoiDongLoat, 'syncCallback');
-                    DOM.status.innerText = `Đã đồng bộ trạng thái Nghỉ dòng ${row + 1} và làm mới tuần thành công.`;
+                    DOM.status.innerText = `Đã đồng bộ trạng thái Nghỉ dòng ${row + 1} thành công.`;
                   }
                 })
                 .withFailureHandler(() => { DOM.status.innerText = "Lỗi đường truyền đồng bộ ma trận tuần khi báo nghỉ!"; })
@@ -1250,7 +1240,7 @@
               if (laDongTrong) hotInstance.setDataAtCell([[row, 4, ""], [row, 5, ""]], 'syncCallback');
 
               let tenTruongDuLieu = (col === 2) ? "Môn học" : "Lớp học";
-              DOM.status.innerText = `Đang đồng bộ ${tenTruongDuLieu} và tự động tính toán lại toàn bộ bài dạy...`;
+              DOM.status.innerText = `Đang đồng bộ ${tenTruongDuLieu} và tự động tính toán...`;
 
               google.script.run
                 .withSuccessHandler(res => {
@@ -1258,7 +1248,7 @@
                     let mangThayDoiDongLoat = [];
                     res.duLieuCapNhatTuan.forEach(item => { mangThayDoiDongLoat.push([item.dongIdx, 4, item.tietPpct], [item.dongIdx, 5, item.tenBaiDay]); });
                     hotInstance.setDataAtCell(mangThayDoiDongLoat, 'syncCallback'); 
-                    DOM.status.innerText = `Đã đồng bộ ${tenTruongDuLieu} dòng ${row + 1} và làm mới tuần thành công.`;
+                    DOM.status.innerText = `Đã đồng bộ ${tenTruongDuLieu} dòng ${row + 1} thành công.`;
                   }
                 })
                 .withFailureHandler(() => { DOM.status.innerText = "Lỗi đường truyền đồng bộ ma trận tuần!"; })
@@ -1313,7 +1303,7 @@
             DOM.printPreviewContainer.innerHTML = ""; DOM.printPreviewContainer.style.display = "block";
             const previewHeader = document.createElement("div");
             previewHeader.style = "padding:8px 12px; background:#0d6efd; color:white; font-weight:bold; font-size:13px; border-radius:6px 6px 0 0; display:flex; justify-content:space-between; align-items:center;";
-            previewHeader.innerHTML = `<span><i class="fa-solid fa-eye"></i> BẢN XEM TRƯỚC TRỰC TUYẾN - LỊCH BÁO GIẢNG IN</span>`;
+            previewHeader.innerHTML = `<span><i class="fa-solid fa-eye"></i> BẢN XEM TRƯỚC TRỰC TUYẾN</span>`;
             
             const closeButton = document.createElement("button");
             closeButton.type = "button"; closeButton.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ĐÓNG BẢNG XEM IN`;
@@ -1332,9 +1322,6 @@
             const iframe = document.createElement("iframe");
             iframe.src = res.urlPreview; iframe.style = "width:100%; height:650px; border:1px solid #ced4da; background:white; border-radius: 0 0 6px 6px;";
             DOM.printPreviewContainer.appendChild(iframe);
-            DOM.status.innerText = "Đã nạp bản xem trước dữ liệu thành công.";
-          } else {
-            alert("Gặp sự cố khi đồng bộ dữ liệu: " + res.error);
           }
         })
         .withFailureHandler(() => { DOM.loadingOverlay.style.display = "none"; alert("Lỗi kết nối đồng bộ dữ liệu xem in!"); })
@@ -1344,17 +1331,16 @@
     document.getElementById("btMoi").addEventListener("click", function() {
       if (!hotInstance || !confirm("Bạn có chắc chắn muốn làm mới lưới tuần này không?")) return;
       let changes = []; for (let r = 0; r < 60; r++) changes.push([r, 2, ""], [r, 3, ""], [r, 4, ""], [r, 5, ""], [r, 6, ""], [r, 7, false]);
-      hotInstance.setDataAtCell(changes, 'loadData'); DOM.status.innerText = "Lưới tính đã được đưa về trạng thái rỗng.";
+      hotInstance.setDataAtCell(changes, 'loadData');
     });
 
     document.getElementById("btLuu").addEventListener("click", function(e) {
-      e.preventDefault(); if (!hotInstance) { alert("Lỗi kết nối: Lưới hiển thị chưa sẵn sàng!"); return; }
+      e.preventDefault(); if (!hotInstance) return;
       const nam = DOM.namhoc.value, truong = DOM.truonghoc.value, gv = DOM.giaovien.value, tuanVal = DOM.tuan.value;
       if (!nam || !truong || !gv || !tuanVal) { alert("Vui lòng nhập đủ thông tin trước khi lưu!"); return; }
 
-      DOM.status.innerText = "Đang đóng gói dữ liệu và lưu lên máy chủ từ xa...";
+      DOM.status.innerText = "Đang đóng gói dữ liệu và lưu lên máy chủ...";
       DOM.loadingOverlay.style.display = "flex";
-      if (DOM.loadingText) DOM.loadingText.innerText = "Hệ thống đang tiến hành ghi tệp từ xa...";
 
       const timeInfo = { ngayBatDau: DOM.ngaybatdau.value, tetTu: DOM.tettu.value, tetDen: DOM.tetden.value, tuan: tuanVal, tuanTuNgay: DOM.tuan_tungay.value, tuanDenNgay: DOM.tuan_denngay.value };
       let mangMaTranAnBuoi = Array(12).fill(false);
@@ -1362,13 +1348,12 @@
 
       google.script.run
         .withSuccessHandler(msg => { 
-          if (msg === "Thành công") {
+          if (msg === "Thành công!") {
             DOM.status.innerText = "✔ Đã đồng bộ lưu lịch báo giảng thành công!";
-            if (DOM.loadingText) DOM.loadingText.innerText = "✔ Đã lưu thành công!";
-            setTimeout(function() { DOM.loadingOverlay.style.display = "none"; DOM.status.innerText = "Hệ thống sẵn sàng thao tác."; }, 500); 
-          } else { DOM.loadingOverlay.style.display = "none"; DOM.status.innerText = "Lỗi: " + msg; alert(msg); }
+            setTimeout(function() { DOM.loadingOverlay.style.display = "none"; }, 500); 
+          } else { DOM.loadingOverlay.style.display = "none"; alert(msg); }
         })
-        .withFailureHandler(err => { DOM.loadingOverlay.style.display = "none"; DOM.status.innerText = "Gặp sự cố đường truyền khi lưu!"; alert("Lỗi tác vụ lưu: " + err); })
+        .withFailureHandler(err => { DOM.loadingOverlay.style.display = "none"; alert("Lỗi tác vụ lưu: " + err); })
         .luuBaoGiangHeThong(nam, truong, gv, timeInfo, hotInstance.getSourceData(), mangMaTranAnBuoi);
     });
 
@@ -1376,23 +1361,18 @@
       if (!hotInstance) return;
       const nam = DOM.namhoc.value, truong = DOM.truonghoc.value, gv = DOM.giaovien.value, tuanHienTai = parseInt(DOM.tuan.value, 10);
       if (!nam || !truong || !gv) { alert("Vui lòng chọn thông tin nhân sự!"); return; }
-      if (tuanHienTai >= 35) { alert("Chỉ sao chép khung từ tuần bé hơn 35!"); return; }
       if (!confirm(`Hệ thống sẽ nhân bản TKB môn/lớp tuần ${tuanHienTai} áp dụng hàng loạt đến hết tuần 35. Xác nhận?`)) return;
 
-      DOM.status.innerText = "Đang nhân bản ma trận thời khóa biểu liên tuần...";
       DOM.loadingOverlay.style.display = "flex";
       google.script.run
-        .withSuccessHandler(msg => { DOM.loadingOverlay.style.display = "none"; DOM.status.innerText = msg; alert(msg); })
-        .withFailureHandler(err => { DOM.loadingOverlay.style.display = "none"; alert("Lỗi nhân bản: " + err); })
+        .withSuccessHandler(msg => { DOM.loadingOverlay.style.display = "none"; alert(msg); })
+        .withFailureHandler(err => { DOM.loadingOverlay.style.display = "none"; alert("Lỗi: " + err); })
         .apDungTKBToanNam(nam, truong, gv, tuanHienTai, hotInstance.getData());
     });
 
     document.getElementById("btInLich")?.addEventListener("click", function() {
       if (!hotInstance) return;
       const nam = DOM.namhoc.value, truong = DOM.truonghoc.value, gv = DOM.giaovien.value, tuNgay = DOM.tuan_tungay.value, tuanVal = DOM.tuan.value; 
-      if (!nam || !truong || !gv) { alert("Vui lòng cấu hình nhân sự trước!"); return; }
-
-      DOM.status.innerText = "Hệ thống đang kết xuất file PDF chuẩn in...";
       DOM.loadingOverlay.style.display = "flex";
 
       let mangMaTranAnBuoi = Array(12).fill(false);
@@ -1401,14 +1381,11 @@
       google.script.run
         .withSuccessHandler(function(res) {
           if (res?.thanhCong) {
-            try {
-              const byteCharacters = atob(res.pdfBase64), byteNumbers = new Array(byteCharacters.length);
-              for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
-              const fileBlob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
-              window.open(URL.createObjectURL(fileBlob), "_blank");
-              DOM.loadingOverlay.style.display = "none"; DOM.status.innerText = "Đã in PDF thành công ra tab mới.";
-            } catch (e) { DOM.loadingOverlay.style.display = "none"; alert("Lỗi file ảo: " + e.message); }
-          } else { DOM.loadingOverlay.style.display = "none"; alert("Lỗi máy chủ: " + res.error); }
+            const byteCharacters = atob(res.pdfBase64), byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+            const fileBlob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
+            window.open(URL.createObjectURL(fileBlob), "_blank"); DOM.loadingOverlay.style.display = "none";
+          } else { DOM.loadingOverlay.style.display = "none"; alert("Lỗi: " + res.error); }
         })
         .xuLyTaoBanInPDF(nam, truong, gv, tuNgay, tuanVal, mangMaTranAnBuoi, hotInstance.getData()); 
     });
@@ -1417,23 +1394,16 @@
     document.getElementById("btXuatMau2")?.addEventListener("click", () => taiFileTuDongNgam("https://docs.google.com/spreadsheets/d/1G-PhwlJMCAypmL22nRjQhs1UYsodIShqAB9AtYfIEZg/export?format=xlsx", "Bieu_Mau_PPCT_2.xlsx"));
     function taiFileTuDongNgam(url, name) { const a = document.createElement("a"); a.href = url; a.setAttribute("download", name); a.click(); }
 
-    document.getElementById("btNhapPPCT").addEventListener("click", function() {
-      if (!DOM.namhoc.value || !DOM.truonghoc.value || !DOM.giaovien.value || !DOM.monhoc_cbo.value || !DOM.khoihoc_cbo.value) { alert("Vui lòng cấu hình đầy đủ thông tin & Môn/Khối lớp!"); return; }
-      DOM.fileInputPPCT.click();
-    });
-
+    document.getElementById("btNhapPPCT").addEventListener("click", function() { DOM.fileInputPPCT.click(); });
     DOM.fileInputPPCT.addEventListener("change", function(e) {
       const file = e.target.files[0]; if (!file) return;
-      DOM.status.innerText = "Hệ thống đang tiến hành rà soát thuật toán phân tích...";
       const reader = new FileReader();
-
       reader.onload = function(e) {
         try {
           const data = new Uint8Array(e.target.result), workbook = XLSX.read(data, { type: 'array' }), worksheet = workbook.Sheets[workbook.SheetNames[0]];
           const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          if (rawRows.length <= 1) { alert("Tệp Excel trống hoặc không có dữ liệu!"); return; }
-
           let tempParsedRows = []; 
+
           for (let i = 1; i < rawRows.length; i++) {
             let row = rawRows[i] || [], tenBaiDay = row[1] ? row[1].toString().trim() : "";
             if (tenBaiDay === "") continue; 
@@ -1465,80 +1435,61 @@
             else { matrixCheckedData.push([sttDemPPCT, item.ten, 1]); sttDemPPCT++; }
           });
 
-          if (matrixCheckedData.length === 0) { alert("Không tìm thấy dữ liệu PPCT hợp lệ sau rà soát!"); return; }
-          DOM.status.innerText = `Rà soát hoàn tất! Thiết lập thành công ${sttDemPPCT - 1} tiết PPCT tuần tự.`;
           DOM.loadingOverlay.style.display = "flex";
-
           google.script.run
-            .withSuccessHandler(msg => { DOM.loadingOverlay.style.display = "none"; DOM.status.innerText = msg; alert(msg); DOM.fileInputPPCT.value = ""; taiLichPPCTDeXem(); })
-            .withFailureHandler(err => { DOM.loadingOverlay.style.display = "none"; alert("Lỗi máy chủ chèn PPCT: " + err); })
+            .withSuccessHandler(msg => { DOM.loadingOverlay.style.display = "none"; alert(msg); DOM.fileInputPPCT.value = ""; taiLichPPCTDeXem(); })
+            .withFailureHandler(err => { DOM.loadingOverlay.style.display = "none"; alert("Lỗi: " + err); })
             .importPPCTFromServer(DOM.namhoc.value, DOM.truonghoc.value, DOM.giaovien.value, DOM.monhoc_cbo.value, DOM.khoihoc_cbo.value, matrixCheckedData);
-        } catch (ex) { DOM.loadingOverlay.style.display = "none"; alert("Lỗi cấu trúc tệp hoặc thư viện phân tích: " + ex.message); }
+        } catch (ex) { alert("Lỗi cấu trúc tệp Excel: " + ex.message); }
       };
       reader.readAsArrayBuffer(file);
     });
 
     document.getElementById("btDoiMatKhau").addEventListener("click", function(e) {
-      e.preventDefault(); if (!DOM.namhoc.value || !DOM.truonghoc.value || !DOM.giaovien.value) { alert("Vui lòng chọn thông tin giáo viên trước!"); return; }
-      document.getElementById("txtMatKhauCu").value = ""; document.getElementById("txtMatKhauMoi").value = ""; document.getElementById("txtXacNhanMatKhau").value = "";
-      DOM.modalDoiMatKhau.style.display = "flex";
+      e.preventDefault(); DOM.modalDoiMatKhau.style.display = "flex";
     });
     document.getElementById("btnHuyDoiMk").addEventListener("click", () => DOM.modalDoiMatKhau.style.display = "none");
     document.getElementById("btnXacNhanDoiMk").addEventListener("click", function() {
       const oldP = document.getElementById("txtMatKhauCu").value.trim(), newP = document.getElementById("txtMatKhauMoi").value.trim(), cP = document.getElementById("txtXacNhanMatKhau").value.trim();
-      if (newP.length < 8) { alert("Mật khẩu mới yêu cầu tối thiểu 8 ký tự!"); return; }
-      if (newP !== cP) { alert("Mật khẩu xác nhận không trùng khớp!"); return; }
+      if (newP.length < 8) { alert("Mật khẩu mới tối thiểu 8 ký tự!"); return; }
+      if (newP !== cP) { alert("Xác nhận không trùng khớp!"); return; }
 
-      DOM.modalDoiMatKhau.style.display = "none"; DOM.status.innerText = "Đang cập nhật mật khẩu lên máy chủ..."; DOM.loadingOverlay.style.display = "flex";
+      DOM.modalDoiMatKhau.style.display = "none"; DOM.loadingOverlay.style.display = "flex";
       google.script.run
-        .withSuccessHandler(res => { DOM.loadingOverlay.style.display = "none"; alert(res.tinNhan); if (res.thanhCong) DOM.status.innerText = "Đổi mật khẩu thành công."; else DOM.modalDoiMatKhau.style.display = "flex"; })
+        .withSuccessHandler(res => { DOM.loadingOverlay.style.display = "none"; alert(res.tinNhan); })
         .capNhatMatKhauMoi(DOM.namhoc.value, DOM.truonghoc.value, DOM.giaovien.value, oldP, newP);
     });
 
     DOM.btnCapNhat?.addEventListener("click", function() {
       const nam = DOM.namhoc.value, truong = DOM.truonghoc.value;
-      if (!nam || !truong || !DOM.giaovien.value) { alert("Hệ thống chưa nạp đủ thông tin phiên thao tác!"); return; }
+      let tenGvNhap = prompt(`Nhập họ và tên Giáo viên mới cần thêm:`);
+      if (!tenGvNhap || tenGvNhap.trim() === "") return;
 
-      let tenGvNhap = prompt(`[HỆ THỐNG] Đang tạo tài liệu báo giảng riêng cho:\nNăm học: ${nam}\nTrường: ${truong}\n\nVui lòng nhập họ và tên Giáo viên mới để đặt tên file:`);
-      if (tenGvNhap === null) { DOM.status.innerText = "Đã hủy bỏ tiến trình cập nhật."; return; }
-      if (tenGvNhap.trim() === "") { alert("Tên giáo viên không được phép bỏ trống!"); return; }
-
-      DOM.status.innerText = "Đang rà soát bảo mật lớp Server, dựng thư mục và nhân bản file mẫu...";
       DOM.loadingOverlay.style.display = "flex";
-
       google.script.run
         .withSuccessHandler(function(res) {
           DOM.loadingOverlay.style.display = "none"; alert(res.tinNhan);
           if (res.thanhCong) {
-            DOM.status.innerText = `Đã thêm giáo viên ${tenGvNhap.trim()} vào hệ thống thành công.`;
             google.script.run
               .withSuccessHandler(function(data) { nguonDuLieuForm = data; if (window.lamMoiComboboxGiaoVienChinh) window.lamMoiComboboxGiaoVienChinh(nam, truong); capNhatComboboxAdminReset(nam, truong); })
               .getListDataDataFromSheet();
-          } else { DOM.status.innerText = "Cập nhật thất bại: " + res.tinNhan; }
+          }
         })
-        .withFailureHandler(function(err) { DOM.loadingOverlay.style.display = "none"; DOM.status.innerText = "Lỗi đường truyền đồng bộ máy chủ!"; alert("Sự cố hệ thống không mong muốn: " + err.toString()); })
         .xuLyCapNhatVaNhanBanFile(nam, truong, tenGvNhap.trim());
     });
 
     DOM.btCapLaiMkAdmin?.addEventListener("click", function() {
       const nam = DOM.namhoc.value, truong = DOM.truonghoc.value, gvHienTai = DOM.giaovien.value, gvCanReset = DOM.cboGvCapLaiMk.value;
-      if (!gvCanReset) { alert("Vui lòng chọn giáo viên cần cấp lại mật khẩu!"); return; }
-      if (!confirm(`HỆ THỐNG XÁC THỰC QUẢN TRỊ\n\nBạn có chắc chắn muốn đưa mật khẩu của giáo viên [ ${gvCanReset} ] về mặc định là: 12345678?`)) return;
+      if (!gvCanReset) { alert("Vui lòng chọn giáo viên!"); return; }
+      if (!confirm(`Bạn có chắc muốn đưa mật khẩu của [ ${gvCanReset} ] về mặc định 12345678?`)) return;
 
-      DOM.status.innerText = "Đang kiểm tra bảo mật máy chủ và thực hiện ghi đè mật khẩu...";
       DOM.loadingOverlay.style.display = "flex";
-
       google.script.run
-        .withSuccessHandler(function(res) {
-          DOM.loadingOverlay.style.display = "none"; alert(res.tinNhan);
-          if (res.thanhCong) { DOM.status.innerText = `Đã đưa mật khẩu giáo viên ${gvCanReset} về 12345678 thành công.`; DOM.cboGvCapLaiMk.value = ""; }
-          else { DOM.status.innerText = "Yêu cầu cấp lại mật khẩu bị từ chối."; }
-        })
-        .withFailureHandler(function(err) { DOM.loadingOverlay.style.display = "none"; DOM.status.innerText = "Lỗi kết nối máy chủ đường truyền!"; alert("Sự cố đồng bộ: " + err.toString()); })
+        .withSuccessHandler(function(res) { DOM.loadingOverlay.style.display = "none"; alert(res.tinNhan); })
         .xuLyCapLaiMatKhauAdmin(nam, truong, gvCanReset, gvHienTai);
     });
 
-    function xulyTimKiemNhanhTrenLuoi() { if (hotInstance) hotInstance.render(); DOM.status.innerText = "Đang áp dụng bộ lọc ký tự trên lưới trực tuyến."; }
+    function xulyTimKiemNhanhTrenLuoi() { if (hotInstance) hotInstance.render(); }
 
     function thucHienXuatExcelLuoiBaoGiang() {
       if (!hotInstance) return;
@@ -1548,27 +1499,24 @@
         const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(mangDuLieuExcel);
         XLSX.utils.book_append_sheet(wb, ws, "Lich_Bao_Giang_Tuan");
         XLSX.writeFile(wb, `LichBaoGiang_Tuan_${DOM.tuan.value || 1}.xlsx`);
-        DOM.status.innerText = "Đã xuất dữ liệu Excel tuần thành công.";
-      } catch (err) { alert("Gặp sự cố khi kết xuất bảng tính Excel nhanh: " + err.message); }
+      } catch (err) { alert("Lỗi xuất file: " + err.message); }
     }
 
     window.lamMoiComboboxGiaoVienChinh = function(nam, truong) {
       const gvHienTai = DOM.giaovien.value;
       google.script.run
         .withSuccessHandler(function(data) {
-          if (data && data.banDoHeThong && data.banDoHeThong[nam] && data.banDoHeThong[nam][truong]) {
+          if (data?.banDoHeThong?.[nam]?.[truong]) {
             nguonDuLieuForm = data;
             const dsGiaoVienTruong = data.banDoHeThong[nam][truong];
             DOM.giaovien.innerHTML = '<option value="">-- Chọn Giáo viên --</option>';
-            
             dsGiaoVienTruong.forEach(gvObj => {
-              if (gvObj && gvObj.ten) {
+              if (gvObj?.ten) {
                 const option = document.createElement("option");
                 option.value = gvObj.ten; option.text = gvObj.ten; DOM.giaovien.appendChild(option);
               }
             });
             DOM.giaovien.value = gvHienTai;
-            DOM.status.innerText = `[QUẢN TRỊ] Đã tải thành công danh sách ${dsGiaoVienTruong.length} giáo viên của trường.`;
           }
         })
         .getListDataDataFromSheet();
