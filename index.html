@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kế hoạch dạy học theo tuần</title>
   
-  <!-- Các thư viện bổ trợ bên thứ ba -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css">
@@ -15,9 +14,6 @@
   <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
-  <!-- ==========================================================================
-     PHẦN 1: TOÀN BỘ GIAO DIỆN CSS GỐC
-     ========================================================================== -->
   <style>
     :root {
         --primary: #1a73e8;
@@ -254,9 +250,6 @@
 </head>
 <body>
   
-  <!-- ==========================================================================
-     PHẦN 2: TOÀN BỘ BỐ CỤC GIAO DIỆN HTML GỐC
-     ========================================================================== -->
   <div id="loginScreen" class="login-wrapper">
     <div class="login-card">
       <div class="login-header">
@@ -473,7 +466,6 @@
                           <td style="border: 1px solid #dee2e6;"><input type="checkbox" class="chk-an-buoi" data-index="2"></td>
                           <td style="border: 1px solid #dee2e6;"><input type="checkbox" class="chk-an-buoi" data-index="4"></td>
                           <td style="border: 1px solid #dee2e6;"><input type="checkbox" class="chk-an-buoi" data-index="6"></td>
-                          <td style="border: 1px solid #dee2e6;"><input type="checkbox" class="chk-an-buoi" data-index="8"></td>
                           <td style="border: 1px solid #dee2e6;"><input type="checkbox" class="chk-an-buoi" data-index="10"></td>
                         </tr>
                         <tr>
@@ -573,9 +565,6 @@
     </div>
   </div>
 
-  <!-- ==========================================================================
-     PHẦN 3: BỘ GIẢ LẬP ĐƯỜNG TRUYỀN GOOGLE.SCRIPT.RUN (LINK WEB APP CỦA BẠN)
-     ========================================================================== -->
   <script>
     const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw9JLNWaYOJjrBpIt285dMaiEcc9nIwQUNvTdqilLakzLx3GfiA6OdsU6UTi99fOfaR/exec";
 
@@ -588,11 +577,19 @@
                 if (methodName === 'withSuccessHandler') return (cb) => dynamicRunner(cb, failureCallback);
                 if (methodName === 'withFailureHandler') return (cb) => dynamicRunner(successCallback, cb);
                 return function(...methodArgs) {
+                  // GIẢI PHÁP SỬA LỖI: Chuyển payload sang biểu mẫu URLSearchParams để ép Google Apps Script xử lý không chuyển hướng
+                  const searchParams = new URLSearchParams();
+                  searchParams.append('action', methodName);
+                  searchParams.append('args', JSON.stringify(methodArgs));
+
                   fetch(GOOGLE_WEB_APP_URL, {
                     method: 'POST',
-                    redirect: 'follow',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: methodName, args: methodArgs })
+                    mode: 'cors', // Ép trình duyệt mở quyền CORS
+                    credentials: 'omit', // Bỏ qua cookie xác thực liên miền để tránh bộ lọc chặn của Edge
+                    headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
+                    },
+                    body: searchParams.toString()
                   })
                   .then(response => {
                     if (!response.ok) throw new Error("Mất kết nối máy chủ dữ liệu Google Sheets");
@@ -620,9 +617,6 @@
     };
   </script>
 
-  <!-- ==========================================================================
-     PHẦN 4: TOÀN BỘ SCRIPT ĐIỀU KHIỂN LOGIC ĐĂNG NHẬP + CHẠY BẢNG TÍNH
-     ========================================================================== -->
   <script>
     let hotInstance = null;
     let hotPPCTInstance = null; 
@@ -666,9 +660,8 @@
     };
 
     document.addEventListener("DOMContentLoaded", function() {
-      // Bật Màn Hình Chờ khi tải danh mục gốc
       DOM.loadingOverlay.style.display = 'flex';
-      DOM.loadingText.innerText = "Đang đồng bộ và nạp cấu hình hệ thống từ Google Sheets...";
+      DOM.loadingText.innerText = "Đang kết nối API và đồng bộ danh mục hệ thống từ Google Sheets...";
       DOM.status.innerText = "Đang kết nối dữ liệu từ máy chủ...";
          
       if (DOM.btnCapNhat) DOM.btnCapNhat.style.display = "none";
@@ -700,7 +693,6 @@
         });
       }
 
-      // GỬI YÊU CẦU TẢI DANH MỤC TỪ SERVER GOOGLE SHEETS
       google.script.run
         .withSuccessHandler(function(data) {
           nguonDuLieuForm = data;
@@ -748,7 +740,6 @@
           DOM.txtTimKiemLuoi?.addEventListener("input", xulyTimKiemNhanhTrenLuoi);
           document.getElementById("btXuatExcelNhanh")?.addEventListener("click", thucHienXuatExcelLuoiBaoGiang);
 
-          // GỌI THỦ TỤC THIẾT LẬP SAU ĐĂNG NHẬP
           taiThongTinDangNhap();
           
           DOM.giaovien.addEventListener("change", function() {
@@ -784,7 +775,6 @@
     }
 
     function taiThongTinDangNhap() {
-      // TẮT NGAY MÀN HÌNH CHỜ ĐỂ NGƯỜI DÙNG TỰ DO LỰA CHỌN THỦ CÔNG
       DOM.loadingOverlay.style.display = 'none';
       
       const isRemember = localStorage.getItem('login_remember');
@@ -1299,7 +1289,7 @@
             const vungLuoiData = document.getElementById('vungChuaLuoiData'), vungTimKiem = document.getElementById('vungTimKiemLuoi'), tieuDeKhung = document.getElementById('lblTieuDeKhung');
             if (vungLuoiData) vungLuoiData.style.setProperty('display', 'none', 'important');
             if (vungTimKiem) vungTimKiem.style.setProperty('display', 'none', 'important');
-            if (tieuDeKhung) tieuDeKhung.innerText = "BẢN XEM TRƯỚC TIẾN TRÌNH IN ẤN PDF";
+            if (tieuDeKhung) tieuDeKhung.innerText = "BẢN XEM TRƯỚC TIẾN TRÌNH IN... ";
 
             DOM.printPreviewContainer.innerHTML = ""; DOM.printPreviewContainer.style.display = "block";
             const previewHeader = document.createElement("div");
@@ -1413,7 +1403,7 @@
             if (laChuDe) tempParsedRows.push({ laChuDe: true, warm: tenBaiDay, ten: tenBaiDay });
             else {
               let soTietGoc = parseInt(soTietGocRaw, 10);
-              if (!isNaN(soTietGoc) && soTietGoc > 1) { for (let j = 0; j < soTietGoc; j++) tempParsedRows.push({ laChuDe: false, ten: tenBaiDay }); }
+              if (!isNaN(soTietGoc) && soTietGoc > 1) { for (let j = 0; j < soTietGoc; j++) tempParsedRows.push({ laChuDe: false, ten: depthDay }); }
               else tempParsedRows.push({ laChuDe: false, ten: tenBaiDay });
             }
           }
