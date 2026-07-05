@@ -106,7 +106,7 @@
     .card-body { padding: 16px; overflow: visible !important; }
 
     .form-grid { display: flex; flex-direction: column; gap: 12px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-grid .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-group label { font-size: 13.5px; color: var(--text-muted); font-weight: 500; }
     .form-control { 
         width: 100% !important; 
@@ -611,16 +611,6 @@
   </script>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const loginForm = document.getElementById('frmDangNhap');
-      if (loginForm) {
-        loginForm.addEventListener('submit', function() {
-          luuThongTinDangNhap();
-        });
-      }
-      taiThongTinDangNhap();
-    });
-
     let hotInstance = null;
     let hotPPCTInstance = null; 
     let nguonDuLieuForm = { namHoc: [], banDoHeThong: {}, monHoc: [], lopHoc: [] };
@@ -663,6 +653,9 @@
     };
 
     document.addEventListener("DOMContentLoaded", function() {
+      // Bật Màn Hình Loading Chờ Đồng Bộ Danh Mục
+      DOM.loadingOverlay.style.display = 'flex';
+      DOM.loadingText.innerText = "Đang kết nối luồng và tải danh mục hệ thống...";
       DOM.status.innerText = "Đang đồng bộ dữ liệu hệ thống từ máy chủ...";
          
       if (DOM.btnCapNhat) DOM.btnCapNhat.style.display = "none";
@@ -694,6 +687,7 @@
         });
       }
 
+      // ĐỒNG BỘ TẢI DANH MỤC TRƯỚC KHI KÍCH HOẠT FORM ĐĂNG NHẬP
       google.script.run
         .withSuccessHandler(function(data) {
           nguonDuLieuForm = data;
@@ -710,7 +704,7 @@
           }
           DOM.monhoc_cbo.innerHTML = ""; DOM.monhoc_cbo.appendChild(f2);
 
-          DOM.status.innerText = "Đồng bộ danh mục thành công. Đang thiết lập cấu hình Form...";
+          DOM.status.innerText = "Đồng bộ danh mục thành công. Đang tải cấu hình...";
           khởiTạoLướiBáoGiảng();
           khởiTạoLướiPhụPPCT(); 
 
@@ -741,6 +735,7 @@
           DOM.txtTimKiemLuoi?.addEventListener("input", xulyTimKiemNhanhTrenLuoi);
           document.getElementById("btXuatExcelNhanh")?.addEventListener("click", thucHienXuatExcelLuoiBaoGiang);
 
+          // CHỈ CHẠY ĐĂNG NHẬP SAU KHI MẠNG ĐÃ ĐỔ DỮ LIỆU XONG XUÔI
           taiThongTinDangNhap();
           
           DOM.giaovien.addEventListener("change", function() {
@@ -751,6 +746,7 @@
           });
         })
         .withFailureHandler(function() {
+          DOM.loadingOverlay.style.display = 'none';
           DOM.status.innerText = "Lỗi kết nối danh mục từ máy chủ tổng!";
           khởiTạoLướiBáoGiảng();
         })
@@ -783,15 +779,13 @@
         tuDongChonSelect('login_truong', localStorage.getItem('login_truong'));
         tuDongChonSelect('login_gv', localStorage.getItem('login_gv'));
       } else {
-        setTimeout(() => {
-          for (let i = 0; i < DOM.loginNam.options.length; i++) {
-            if (DOM.loginNam.options[i].value === "2026-2027") {
-              DOM.loginNam.selectedIndex = i;
-              DOM.loginNam.dispatchEvent(new Event('change'));
-              break;
-            }
-          }
-        }, 500);
+        // Tối ưu gán mặc định Năm học, kích hoạt đổ Trường học rồi TẮT Loading ẩn
+        if (Array.from(DOM.loginNam.options).some(opt => opt.value === "2026-2027")) {
+          DOM.loginNam.value = "2026-2027";
+          capNhatComboboxTruongHoc("2026-2027");
+        } else {
+          DOM.loadingOverlay.style.display = 'none';
+        }
       }
     }
 
@@ -824,6 +818,11 @@
       const truongHoc = DOM.loginTruong.value;
       const giaoVien = DOM.loginGv.value;
       const matKhau = DOM.loginPass.value.trim();
+
+      if(!namHoc || !truongHoc || !giaoVien) {
+         alert("Vui lòng đợi hệ thống nạp danh mục cấu hình và chọn đủ thông tin trước khi nhấn Đăng nhập!");
+         return;
+      }
 
       DOM.loadingOverlay.style.display = 'flex';
       DOM.loadingText.innerText = 'Đang xác thực thông tin tài khoản giáo viên...';
@@ -883,19 +882,22 @@
         })
         .withFailureHandler(function(err) {
           DOM.loadingOverlay.style.display = 'none';
-          alert('Lỗi kết nối máy chủ đường truyền: ' + err.message);
+          alert('Lỗi kết nối máy chủ đường truyền: ' + err.toString());
         })
         .xacThucMatKhauGiaoVien(namHoc, truongHoc, giaoVien, matKhau); 
     }
 
     function capNhatComboboxTruongHoc(namHocDuocChon) {
-      if (!namHocDuocChon || !nguonDuLieuForm.banDoHeThong[namHocDuocChon]) return;
+      if (!namHocDuocChon || !nguonDuLieuForm.banDoHeThong[namHocDuocChon]) {
+         DOM.loadingOverlay.style.display = "none";
+         return;
+      }
       const f = document.createDocumentFragment();
       f.appendChild(new Option("-- Chọn Trường học --", ""));
       Object.keys(nguonDuLieuForm.banDoHeThong[namHocDuocChon]).forEach(t => f.appendChild(new Option(t, t)));
       DOM.loginTruong.innerHTML = ""; DOM.loginTruong.appendChild(f);
       DOM.loginGv.innerHTML = '<option value="">-- Chọn Trường trước --</option>';
-      DOM.loadingOverlay.style.display = "none"; // Bảo mật tắt loading khi đổ trường học
+      DOM.loadingOverlay.style.display = "none"; // Hoàn tất đồng bộ tắt Loading
     }
 
     function capNhatComboboxGiaoVien(namHocHienTai, truongHocDuocChon) {
@@ -908,28 +910,23 @@
 
     function capNhatComboboxAdminReset(namHocHienTai, truongHocDuocChon) {
       const cboReset = DOM.cboGvCapLaiMk;
-      const cboXoa = DOM.cboGvXoaAdmin;
       if (!namHocHienTai || !truongHocDuocChon || !nguonDuLieuForm.banDoHeThong[namHocHienTai]?.[truongHocDuocChon]) return;
 
       const fReset = document.createDocumentFragment();
-      const fXoa = document.createDocumentFragment();
       fReset.appendChild(new Option("-- Chọn giáo viên cần cấp lại --", ""));
-      fXoa.appendChild(new Option("-- Chọn giáo viên --", ""));
 
       nguonDuLieuForm.banDoHeThong[namHocHienTai][truongHocDuocChon].forEach(gv => {
         fReset.appendChild(new Option(gv.ten, gv.ten));
-        fXoa.appendChild(new Option(gv.ten, gv.ten));
       });
 
       if (cboReset) { cboReset.innerHTML = ""; cboReset.appendChild(fReset); }
-      if (cboXoa) { cboXoa.innerHTML = ""; cboXoa.appendChild(fXoa); }
     }
 
     DOM.btXoaGvAdmin?.addEventListener("click", function() {
       const nam = DOM.namhoc.value;
       const truong = DOM.truonghoc.value;
       const gvHienTai = DOM.giaovien.value; 
-      const gvCanXoa = DOM.cboGvXoaAdmin ? DOM.cboGvXoaAdmin.value : "";
+      const gvCanXoa = DOM.cboGvCapLaiMk ? DOM.cboGvCapLaiMk.value : "";
 
       if (!gvCanXoa) { alert("Vui lòng lựa chọn họ và tên Giáo viên cần xóa khỏi hệ thống!"); return; }
       if (gvCanXoa === gvHienTai) { alert("Bảo mật hệ thống từ chối: Bạn không được phép tự xóa tài khoản của chính mình!"); return; }
